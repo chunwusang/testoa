@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+    <head>
+        <meta charset="utf-8">
+<title></title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="renderer" content="webkit">
+
+<link rel="shortcut icon" href="/assets/img/favicon.ico" />
+<!-- Loading Bootstrap -->
+<link href="/assets/css/backend.min.css?v=1.0.1" rel="stylesheet">
+
+<!-- HTML5 shim, for IE6-8 support of HTML5 elements. All other JS at the end of file. -->
+<!--[if lt IE 9]>
+  <script src="/assets/js/html5shiv.js"></script>
+  <script src="/assets/js/respond.min.js"></script>
+<![endif]-->
+<script type="text/javascript">
+    var require = {
+        config:  {"site":{"name":"FastAdmin","cdnurl":"","version":"1.0.1","timezone":"Asia\/Shanghai","languages":{"backend":"zh-cn","frontend":"zh-cn"}},"upload":{"cdnurl":"","uploadurl":"ajax\/upload","bucket":"local","maxsize":"10mb","mimetype":"jpg,png,jpeg,gif","multipart":[],"multiple":false},"modulename":"admin","controllername":"user.rule","actionname":"edit","jsname":"backend\/user\/rule","moduleurl":"\/admin","language":"zh-cn","fastadmin":{"usercenter":true,"login_captcha":false,"login_failure_retry":true,"login_unique":false,"login_background":"\/assets\/img\/loginbg.jpg","multiplenav":false,"checkupdate":false,"version":"1.0.0.20181210_beta","api_url":"https:\/\/api.fastadmin.net"},"referer":null,"__PUBLIC__":"\/","__ROOT__":"\/","__CDN__":"https:\/\/cdn.pure.fastadmin.net"}    };
+</script>
+    </head>
+
+    <body class="inside-header inside-aside is-dialog">
+        <div id="main" role="main">
+            <div class="tab-content tab-addtabs">
+                <div id="content">
+                    <div class="row">
+                        <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+                            <section class="content-header hide">
+                                <h1>
+                                    控制台                                    <small>Control panel</small>
+                                </h1>
+                            </section>
+                                                        <div class="content">
+                                <form id="edit-form" class="form-horizontal" role="form" data-toggle="validator" method="POST" action="">
+
+    <div class="form-group">
+        <label for="content" class="control-label col-xs-12 col-sm-2">是否菜单:</label>
+        <div class="col-xs-12 col-sm-8">
+            <div class="radio"><label for="row[ismenu]-1"><input id="row[ismenu]-1" name="row[ismenu]" type="radio" value="1"> 是</label> <label for="row[ismenu]-0"><input id="row[ismenu]-0" checked="checked" name="row[ismenu]" type="radio" value="0"> 否</label></div>        </div>
+    </div>
+    <div class="form-group">
+        <label for="pid" class="control-label col-xs-12 col-sm-2">父级:</label>
+        <div class="col-xs-12 col-sm-8">
+            <select class="form-control" required="" name="row[pid]"><option value="0">无</option><option value="2"> API接口</option><option value="4">&nbsp;└ 会员模块</option><option value="1"> 前台</option><option value="3" selected="selected">&nbsp;└ 会员模块</option></select>        </div>
+    </div>
+    <div class="form-group">
+        <label for="c-name" class="control-label col-xs-12 col-sm-2">规则:</label>
+        <div class="col-xs-12 col-sm-8">
+            <input id="c-name" class="form-control" name="row[name]" type="text" placeholder="Controller/Action" value="index/user/profile">
+        </div>
+    </div>
+    <div class="form-group">
+        <label for="c-title" class="control-label col-xs-12 col-sm-2">标题:</label>
+        <div class="col-xs-12 col-sm-8">
+            <input id="c-title" class="form-control" name="row[title]" type="text" value="个人资料">
+        </div>
+    </div>
+    <div class="form-group">
+        <label for="remark" class="control-label col-xs-12 col-sm-2">备注:</label>
+        <div class="col-xs-12 col-sm-8">
+            <textarea class="form-control" id="remark" name="row[remark]"></textarea>
+        </div>
+    </div>
+    <div class="form-group">
+        <label for="c-weigh" class="control-label col-xs-12 col-sm-2">权重:</label>
+        <div class="col-xs-12 col-sm-8">
+            <input id="c-weigh" class="form-control" name="row[weigh]" type="number" value="4">
+        </div>
+    </div>
+    <div class="form-group">
+        <label for="content" class="control-label col-xs-12 col-sm-2">状态:</label>
+        <div class="col-xs-12 col-sm-8">
+            <div class="radio"><label for="row[status]-normal"><input id="row[status]-normal" checked="checked" name="row[status]" type="radio" value="normal"> 正常</label> <label for="row[status]-hidden"><input id="row[status]-hidden" name="row[status]" type="radio" value="hidden"> 隐藏</label></div>        </div>
+    </div>
+    <div class="form-group layer-footer">
+        <label class="control-label col-xs-12 col-sm-2"></label>
+        <div class="col-xs-12 col-sm-8">
+            <button type="submit" class="btn btn-success btn-embossed disabled">确定</button>
+            <button type="reset" class="btn btn-default btn-embossed">重置</button>
+        </div>
+    </div>
+</form>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script src="/assets/js/require.min.js" data-main="/assets/js/require-backend.min.js?v=1.0.1"></script>
+<script>
+var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "https://hm.baidu.com/hm.js?58347d769d009bcf6074e9a0ab7ba05e";
+  var s = document.getElementsByTagName("script")[0];
+  s.parentNode.insertBefore(hm, s);
+})();
+</script>
+    </body>
+</html>

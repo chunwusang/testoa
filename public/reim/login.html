@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="viewport" content="maximum-scale=1.0,minimum-scale=1.0,user-scalable=0,width=device-width,initial-scale=1.0"/>
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="yes" />
+<title>REIM</title>
+<link rel="stylesheet" type="text/css" href="/css/webimcss.css"/>
+<link rel="shortcut icon" href="/favicon.ico" />
+<script type="text/javascript" src="/js/jquery.js"></script>
+<script type="text/javascript" src="/js/js.js"></script>
+<script type="text/javascript" src="/js/base64-min.js"></script>
+<script type="text/javascript" src="/reim/js/nwjs.js"></script>
+<style>
+.lmaisft{text-align:left;-webkit-app-region:no-drag;}
+.close{height:20px;width:20px;display:block;text-align:center;line-height:18px;cursor:pointer;font-size:16px}
+.close:hover{background:#ff1118;color:white}
+</style>
+<script>
+var logifouct=false;
+function initbody(){
+	TOKEN = '';
+	resize();
+	$(window).resize(resize);
+	js.splittime=0;
+	get('reimuser').value = js.getoption('reimuser');
+	getpassobj().val(js.getoption('reimpass'));
+	
+	var fse=js.getoption('reimface');
+	if(fse)get('myface').src=fse;
+	get('myface').title = NOWURL;
+	//禁止后退
+	try{
+		history.pushState(null, null, document.URL);
+		window.addEventListener('popstate', function (){
+			history.pushState(null, null, document.URL);
+		});
+	}catch(e){}
+	
+	if(get('checkautologin')){
+		get('checkautologin').checked = js.getoption('autologin')=='1';
+		autologin(3);
+	}
+
+	nwjs.init();
+	if(winWb()>320)rewinheight(450,300);
+	
+	if(nwjsgui){
+		$('#footerts').append('<a style="font-size:12px" onclick="return clearchater()" href="javascript:;">清缓存</a>');
+	}
+	
+	//readfilep();
+}
+
+function readfilep(){
+	var naea 	= nwjsgui.App.dataPath;
+	var na 		= nwjsgui.App.manifest.name;
+	var oru		= naea.split(na)[0]+na;
+	
+	var fs = require('fs');
+	
+	fs.readdir(oru,function(err,files){
+		files.forEach(function(filename){
+			alert(filename);
+		});
+	});
+	//alert(oru);
+}
+
+function clearchater(){
+	nwjsgui.App.clearCache();
+	localStorage.clear();
+	var na = nwjsgui.App.manifest.name;
+	js.confirm('基本缓存已删除，更多缓存删除，是否打开对应['+na+']目录？需手动全部删除目录。',function(jg){
+		if(jg=='yes'){
+			var naea = nwjsgui.App.dataPath;
+			var oru= naea.split(na)[0]+na;
+			nwjsgui.Shell.openItem(oru);
+			nwjsgui.App.quit();
+		}
+	});
+}
+
+//回到初始页面
+function gettoback(){
+	return;
+	var ostr = '{"main": "index.html","name": "REIM","description": "REIM即时通信，是信呼团队开发的一款即时聊天应用，by http://www.rockoa.com/","version": "1.1.2","node-remote":"http://127.0.0.1/","window": {"title": "REIM","icon": "images/logo.png","frame": true,"width": 450,"height": 300,"position": "center","min_width": 450,"min_height": 300,"show_in_taskbar":true,"kiosk":false},"webkit": {"plugin": true,"page-cache":false}}';
+	nwjs.fs.writeFile('package.json', ostr,function(err,d){
+		if(err){
+			js.msg('msg',err);
+			return;
+		}
+		js.alert('已确认，请退出软件重新启动。','', function(){
+			nwjsgui.App.quit();
+		});
+	});
+}
+
+function autologin(ms){
+	if(!logifouct && get('checkautologin') && get('checkautologin').checked && form('reimuser').value!='' && getpassobj().val()){
+		form('submitbtn').value=''+ms+'秒后自动登录';
+		if(ms==0){
+			loginsubmit();
+		}else{
+			setTimeout('autologin('+(ms-1)+')',1000);
+		}
+	}else{
+		form('submitbtn').value = '登录';
+	}
+}
+
+function bodyunload(){
+	nwjs.removetray();
+}
+function resize(){
+	var tt=$(window).height()-$('.lmaisft').height();
+	var ts=(tt*0.5)-20;
+	if(ts<10)ts=10;
+	$('#mindivshow').css('height',''+(winHb()-42)+'px');
+}
+function loginsubmit(lx){
+	var user = get('reimuser').value;
+	var pass = getpassobj().val();
+	js.setmsg('');
+	if(user==''){
+		get('reimuser').focus();
+		return false;
+	}
+	if(pass==''){
+		getpassobj().focus();
+		return false;
+	}
+	var o = get('btn0');
+	o.value='登录中...';
+	o.disabled=true;
+	js.setoption('reimuser', user);
+	js.setoption('reimpass', pass);
+	js.setmsg('');
+	js.ajax('/api/user/logincheck',{'user':user,'pass':pass,'cfrom':'reim','device':device}, function(ret){
+		o.value='登录成功';
+		loginsuccess(ret.data);
+	},'post',function(str){
+		o.value='登录';
+		o.disabled=false;
+	});
+	return false;
+}
+function loginsuccess(a){
+	js.setoption('reimface',a.face);
+	get('myface').src=a.face;
+	js.setoption(TOKENKEY,a.token);
+	js.setoption('title',a.title);
+	$('#mindivshows').hide();
+	rewinheight(600, 900);
+	js.location('index.html');
+}
+function getpassobj(){
+	return $('input[type=password]');
+}
+function changeauto(o){
+	var oi = '0';
+	if(o.checked)oi='1';
+	js.setoption('autologin', oi);
+}
+function winclose(){
+	nwjs.closebool=true;
+	nwjs.win.close();
+}
+
+function rewinheight(hei, wid){
+	var l = (screen.width-wid)*0.5;
+	var t = (screen.height-hei)*0.5-20;
+	nwjs.win.moveTo(l,t);
+	nwjs.win.resizeTo(wid,hei);
+}
+</script>
+</head>
+
+
+<body style="overflow:hidden;">
+<div style="position:absolute;right:6px;top:6px;-webkit-app-region:no-drag;z-index:5">
+<span onclick="winclose();" title="关闭" class="close">×</span>
+</div>
+<div style="background:#f5f5f5;border:1px #cccccc solid;overflow:hidden; border-radius:5px;box-shadow:0px 0px 8px rgba(0,0,0,0.3);margin:5px">
+
+<div style="height:30px;overflow:hidden;-webkit-app-region:drag;margin-right:30px;user-select:none; ">&nbsp;</div>
+
+<div align="center" id="mindivshow" style="height:348px;overflow:hidden">
+	<div id="mindivshows">
+	<div class="lmaisft">
+		<div id="topblank" style="height:5px;overflow:hidden"></div>
+		<div style="user-select:none;-webkit-user-select: none;" align="center"><img onclick="location.reload()" src="/images/logo.png" id="myface" style="border-radius:50%;" align="absmiddle" height="80" width="80"></div>
+		<div class="blank10"></div>
+		<form style="padding:10px;padding-left:50px" name="myform">
+			
+			<div>
+				<div><input type="text" onfocus="logifouct=true" style="height:35px;width:190px;border-radius:5px" class="input" onKeyUp="if(event.keyCode==13)getpassobj().focus()" maxlength="20" placeholder="请输入用户名/手机号" id="reimuser" name="reimuser" ></div>
+			</div>
+
+			<div class="blank20"></div>
+			<div>
+				<div><input onfocus="logifouct=true" style="height:35px;width:190px;border-radius:5px" class="input" onKeyUp="if(event.keyCode==13)loginsubmit(1)" value="" type="password" placeholder="请输入密码"></div>
+			</div>
+			
+			<div class="blank10"></div>
+			<div>
+				<label><input onclick="changeauto(this)" id="checkautologin" type="checkbox">下次自动登录</label>
+			</div>
+		
+			
+			<div class="blank20"></div>
+
+			<div align="left">
+				<input type="button" id="btn0" style="height:35px;width:200px;border-radius:5px;font-size:16px" onClick="loginsubmit(1)" class="btn" name="submitbtn" value="登录">
+				
+			</div>
+			<span id="msgview"></span>
+
+		</form>
+	
+	</div>
+	<div align="center" id="footerts" style="color:#888888;font-size:12px"></div>
+	</div>
+</div>
+
+
+</div>
+</body>
+</html>

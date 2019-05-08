@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=0">
+<title>信呼OA云平台</title>
+<link rel="stylesheet" type="text/css" href="../css/weui.min.css"/>
+<link rel="stylesheet" type="text/css" href="../css/rui.css"/>
+<link rel="stylesheet" type="text/css" href="../res/fontawesome/css/font-awesome.min.css">
+<link rel="shortcut icon" id="ico" href="../favicon.ico" />
+<script type="text/javascript" src="../js/jquery.js"></script>
+<script type="text/javascript" src="../js/jsm.js"></script>
+<script type="text/javascript" src="../js/base64-min.js"></script>
+<script type="text/javascript" src="../js/workerman_chat/test_chat.js"></script>
+<style>
+body,html{overflow:hidden;}
+.page_desc{text-align:center;color:#aaaaaa;font-size:12px;position:absolute;bottom:10px;left:0px;width:100%}
+.hd{padding:2em 0; text-align:center}
+.hd img{height:100px;width:100px;border-radius:50px}
+.weui_label{width:80px;}
+.weui_btn:disabled{background:#aaaaaa}
+
+.weui_tabbar_icon{text-align:center;color:#888888;font-size:22px; height:24px;overflow:hidden;line-height:5px;}
+.weui_tabbar_item{position:relative;height:50px;overflow:hidden}
+.weui_media_box{padding:10px 15px}
+.weui_media_box.weui_media_appmsg .weui_media_hd {height:40px;width:40px;line-height:40px}
+.weui_media_box .weui_media_desc{height:20px;line-height:20px;padding-right:20px}
+.weui_bar_item_on .weui_tabbar_icon{color:#336699}
+
+.weui_grid_icon{width:30px;height:30px;text-align:center;}
+.weui_grid_icon img{border-radius:6px}
+.weui_grid_icon i{font-size:26px}
+.weui_grid_icon span{position:absolute;top:5px;right:2px;}
+.weui_tabbar_item span{position:absolute;right:5px;top:2px}
+.weui_media_bd span{position:absolute;right:10px;top:10px}
+.weui_media_bd font{position:absolute;right:5px;top:35px;font-size:13px;color:#888888}
+.hd{padding:2em 0; text-align:center}
+.hd img{height:100px;width:100px;border-radius:50px}
+
+
+.weui_media_box:before{left:0}
+.agentp{color:#888888;padding:5px;font-size:14px;margin-top:5px}
+
+.weui_daohang{display:inline-block;width:100%;background:#f1f1f1;}
+.weui_daohang span{height:50px;padding:0px 8px;display:block;line-height:50px; float:left;margin:0px;}
+.weui_daohang .jiantou{padding:0px;font-size:12px;color:#cccccc}
+.weui_grid_label{height:20px;overflow:hidden}
+</style>
+<script>
+function initbody(){
+	date = js.now('Y-m-d');
+	backurl = js.request('backurl');
+	im.settitle();
+	var us=js.getoption('adminuser');
+	if(us)$('#adminuser').val(us);
+	getpassobj().val(js.getoption('adminpass'));
+	
+	adminface = js.getoption('adminface');
+	if(adminface)setface(adminface);
+	
+	if(js.iswxbro || js.isdingbro)$('#headertop').remove();
+	if(backurl!=''){
+		js.setoption(TOKENKEY);
+		TOKEN = '';
+	}
+	if(TOKEN==''){
+		$('#logindiv').show();
+	}else{
+		$('#indexdiv').show();
+		im.initshow();
+	}
+	
+	$('#adminuser').keyup(function(e){
+		if(e.keyCode==13 && this.value)$('#adminpass').focus();
+	});
+	$('#adminpass').keyup(function(e){
+		if(e.keyCode==13 && this.value)loginsubmit(0);
+	});
+	
+	im.resiezess();
+	$(window).resize(im.resiezess);
+}
+
+function setface(fas){
+	if(!fas)return;
+	if(get('myface'))get('myface').src=fas;
+	if(get('myfaceset'))get('myfaceset').src=fas;
+	if(get('myfacesets'))get('myfacesets').src=fas;
+	js.setoption('adminface', fas);
+	adminface=fas;
+}
+
+function loginsubmit(lx){
+	var user = $('#adminuser').val(),pass = getpassobj().val();
+	if(!user){js.alert('帐号不能为空',function(){$('#adminuser').focus()});return;}
+	if(!pass){js.alert('密码不能为空',function(){getpassobj().focus()});return;}
+	
+	var o = get('btn0');
+	o.value='登录中...';
+	o.disabled=true;
+	js.setoption('adminuser', user);
+	js.setoption('adminpass', pass);
+	js.ajax('api/user/logincheck', {'user':user,'pass':pass,'cfrom':js.getcfrom(),'device':device}, function(ret){
+		o.value='登录';
+		var da = ret.data;
+		setface(da.face);
+		TOKEN	= da.token;
+		js.setoption(TOKENKEY,da.token);
+		js.setoption('title',da.title);
+		im.settitle();
+		if(backurl!=''){
+			js.location(jm.base64decode(backurl));
+			return;
+		}
+		$('#logindiv').hide();
+		$('#indexdiv').show();
+		o.disabled=false;
+		im.initshow();
+	},'post',function(msg){
+		o.value='登录';
+		o.disabled=false;
+	});
+}
+
+function getpassobj(){
+	return $('input[type=password]');
+}
+function setcog(){
+	js.prompt('设置','输入你平台地址',function(jg,txt){
+		if(jg=='yes' && txt){apiurl = txt;js.setoption('apiurl',apiurl);}
+	},apiurl);
+}
+
+
+var agentarr={},cnum='';
+var im={
+	index:0,
+	companyid:0,
+	companyinfo:{},
+	userinfo:{},
+	initbool:false,
+	settitle:function(){
+		title = js.getoption('title', '信呼OA云平台');
+		document.title = title;
+		$('#header_title').html(title);
+	},
+	initshow:function(){
+		cnum = js.request('cnum');
+		if(!cnum)cnum = js.getoption('nowcnum');
+		var site = 0;
+		try{site = sessionStorage.getItem('nowtabssss');}catch(e){}
+		if(!site)site=0;
+		
+		if(!im.touchobj)im.touchobj = $('#mainbody').rockdoupull({
+			downbool:true,
+			ondownsuccess:function(){
+				im.reload('none');
+			},
+			ondownbefore:function(){
+				return (im.index==0 || im.index==1 || im.index==2);
+			},
+			ondrayrlend:function(lx){
+				if(lx<-100)im.changetab(im.index+1);
+				if(lx>100)im.changetab(im.index-1);
+			}
+		});
+		this.initsearch();
+		this.changetab(site);
+		if(this.index!=2){
+			this.initload();
+		}
+	},
+	changetab:function(lx){
+		var lx	= parseFloat(lx);
+		if(lx<0)lx=3;
+		if(lx>3)lx=0;
+		$("[index='main']").hide();
+		var sid = 'main_index'+lx+'';
+		$('#'+sid+'').show();
+		$('.weui_tabbar a').removeClass('weui_bar_item_on');
+		$('.weui_tabbar a:eq('+lx+')').addClass('weui_bar_item_on');
+		var ties= js.getoption('companyshore','应用');
+		$('#agenh_tabbar').html(ties);
+		var tass=['消息',ties,'联系人','我'];
+		$('.r-header-text').html(tass[lx]);
+		this.index = lx;
+		try{sessionStorage.setItem('nowtabssss', lx);}catch(e){}
+		im.touchobj.hidescrolls();
+		if(lx==2)this.showuserlist();
+	},
+	
+	initload:function(lx){
+		if(lx!='none')js.loading();
+		this.initbool = true;
+		js.ajax(this.getapiurl('index'),false, function(ret){
+			im.data = ret.data;
+			im.showdata(ret.data);
+			im.reloadok();
+		},'get',function(){
+			im.showerror();
+		});
+	},
+	showdata:function(da){
+		var ats = da.useainfo; //当前单位用户
+		this.userinfo = da.userinfo;
+		this.useainfo = ats;
+		$('#myshow_deptname').html('');
+		$('#companyinfo').hide();
+		this.showhistory(da.charhist);
+		jm.setJmstr(jm.base64decode(this.userinfo.randshow));
+		if(ats){
+			$('#companyinfo').show();
+			this.companyinfo = ats.company;
+			this.companyid	 = this.companyinfo.id;
+			cnum		= this.companyinfo.num;
+			js.setoption('nowcnum', cnum);
+			var shortna = this.companyinfo.shortname;
+			get('ico').href = this.companyinfo.logo;
+			get('myshow_logo').src = this.companyinfo.logo;
+			$('#myshow_companyname').html(this.companyinfo.name);
+			$('#myshow_companynum').html('单位编号：'+cnum+'');
+			js.setoption('companyshore', shortna);
+			$('#agenh_tabbar').html(shortna);
+			if(this.index==1)$('.r-header-text').html(shortna);
+			document.title = shortna;
+			$('#myshow_deptname').html(ats.deptallname);
+			$('#myshow_position').html(ats.position);
+			$('#myshow_mobile').html(jm.uncrypt(ats.mobile));
+			$('#myshow_email').html(jm.uncrypt(ats.email));
+			this.showagent();
+		}
+		$('#myshow_name').html(this.userinfo.name);
+		setface(this.userinfo.face);
+	},
+	showerror:function(){
+		if(this.touchobj)this.touchobj.ondownerror();
+	},
+	reloadok:function(){
+		if(this.touchobj)this.touchobj.ondownok();
+	},
+	showuserlist:function(){
+		if($('#deptlist').html()=='' && $('#list').html()==''){
+			this.reloaduser();
+		}	
+	},
+	getapiurl:function(lx){
+		var url = 'apijct/we/'+lx+'';
+		if(cnum!='')url+='/'+cnum+'';
+		return url;
+	},
+	showhistory:function(a){
+		var i,len=a.length;
+		$('#historylist').html('');
+		$('#historylist_tems').show();
+		for(i=0;i<len;i++){
+			this.showhistorys(a[i]);
+		}
+		this.changestotl(false,0);
+		if(i>0)$('#historylist_tems').hide();
+	},
+	showhistorys:function(d,pad){
+		var s,ty,o=$('#historylist'),d1,st,attr;
+		var num = ''+d.type+'_'+d.receid+'';
+		st	= d.stotal;if(!st)st='';
+		var ops = d.optdt.substr(11,5);
+		if(d.optdt.indexOf(date)!=0)ops=d.optdt.substr(5,5);
+		ty	= d.type;
+		var na = d.name;
+		if(d.title)na=d.title;
+		s='<a id="index_'+num+'" onclick="im.clickitems(\''+ty+'\',\''+d.receid+'\',\''+d.name+'\', this)" class="weui_media_box weui_media_appmsg">';
+		s+='	<div class="weui_media_hd">';
+		s+='		<img class="weui_media_appmsg_thumb" src="'+d.face+'">';
+		s+='	</div>';
+		s+='	<div class="weui_media_bd">';
+		s+='		<span id="histotal_'+num+'" class="badge">'+st+'</span>';
+		s+='		<font >'+ops+'</font>';
+
+		s+='		<h4 class="weui_media_title">'+na+'</h4>';
+		s+='		<p class="weui_media_desc">'+jm.base64decode(d.cont)+'</p>';
+		s+='	</div>';
+		s+='</a>';
+		o.append(s);
+	},
+	clickitems:function(ty,id,nas, o){
+		if(ty=='unit'){
+			js.confirm('确定要却换到单位['+nas+']吗？',function(jg){
+				if(jg=='yes'){
+					js.loading('切换中...');
+					js.setoption('nowcnum', id);
+					js.location('/we/index.html?cnum='+id+'');
+				}
+			},'切换单位');
+			return;
+		}
+		var o1=$(o);
+		js.showmenu({
+			data:[{name:'打开',lx:0},{name:'删除此记录',lx:1}],
+			onclick:function(a){
+				var lx=a.lx;
+				if(lx==0){
+					im.openguser(ty,id,nas);
+				}
+				if(lx==1){
+					o1.remove();
+					var tst=$('#historylist').text();if(tst=='')$('#historylist_tems').show();
+					js.ajax(im.getapiurl('reim_delhchat'),{type:ty,gid:id},false,'get');
+				}
+			}
+		});
+	},
+	biaoyd:function(type,gid){
+		js.ajax(this.getapiurl('reim_biaoyd'),{type:type,gid:gid},false,'get');
+	},
+	reloaduser:function(lx){
+		if(lx!='none')js.loading();
+		js.ajax(this.getapiurl('tongxl'),false,function(ret){
+			im.reloadusershow(ret.data);
+			if(!im.initbool)im.initload(); //没有初始化过
+			im.reloadok();
+		}, 'get', function(){
+			im.showerror();
+		});
+	},
+	reloadusershow:function(da){
+		userarr	 = da.useaarr;
+		deptarr	 = da.deptarr;
+		grouparr = da.grouparr;
+		var i,len=userarr.length;
+		$('#userdao').html('');
+		$('#userstotal').html('('+len+')');
+		this.showuserlists(da.deptroot.id, 0);
+		this.showgroupall();
+	},
+	showuserlists:function(id,level, o1){
+		if(o1){
+			var as = $('#userdao span');
+			var rb = false;
+			for(var i=0;i<as.length;i++){
+				if(o1==as[i])rb=true;
+				if(rb)$(as[i]).remove();
+				
+			}
+		}
+		var a =deptarr,i,len=a.length,d,dn;
+		$('#deptlist').html('');
+		$('#list').html('')
+
+		for(i=0;i<len;i++){
+			d = a[i];
+			if(d.id==id)dn=d;
+			if(d.pid==id){
+				d.face = '/images/wjj.png';
+				this.showdeptlsit(d, level+1);
+			}
+		}
+		if(level>0)$('#userdao').append('<span class="jiantou">＞</span>');
+		$('#userdao').append('<span onclick="im.showuserlists('+id+',0, this)">'+dn.name+'</span>');
+		len=userarr.length;
+		
+		//人员放在前面
+		var noi = 0;
+		for(i=0;i<len;i++){
+			d = userarr[i];
+			if(d.deptid==id || d.deptids.indexOf(','+id+',')>-1){
+				this.showlist(d, false);
+				noi++;
+			}
+		}
+		
+		if(noi==0 && $('#deptlist').html()==''){
+			$('#list').append('<div style="font-size:14px;text-align:center;padding:30px 10px;color:#cccccc">'+dn.name+' 下无联系人</div>');
+		}
+	},
+	showdeptlsit:function(a, level){
+		var s='';
+		s+='<a class="weui_media_box weui_media_appmsg" onclick="im.showuserlists('+a.id+','+level+')">';
+		s+=' 	<div class="weui_cell_hd"><img src="'+a.face+'" alt="" style="width:34px;margin-right:5px;display:block"></div>';
+		s+=' 	<div class="weui_cell_bd weui_cell_primary"><p>'+a.name+'';
+		if(a.ntotal>0)s+=' <span style="font-size:12px;color:#888888">('+a.ntotal+')</span>';
+		s+='	</p></div>';
+		s+='</a>';
+		$('#deptlist').append(s);
+	},
+	showgroupall:function(){
+		var i,len2=grouparr.length;
+		$('#grouplist').html('');
+		$('#groupstotal').html('('+len2+')');
+		for(i=0;i<len2;i++)this.showgroup(grouparr[i], true);
+	},
+	showgroup:function(a, cbo){
+		var s='';
+		s+='<a class="weui_cell"  onclick="im.openguser(\'group\','+a.id+',\''+a.name+'\')">';
+		s+=' 	<div class="weui_cell_hd"><img src="'+a.face+'" alt="" style="width:34px;margin-right:5px;display:block"></div>';
+		s+=' 	<div class="weui_cell_bd weui_cell_primary"><p>'+a.name+'</p></div>';
+		s+='</a>';
+		$('#grouplist').append(s);
+	},
+	showlist:function(a, cbo){
+		var s='<a temp="user_'+a.id+'" onclick="im.openuinfo('+a.id+')" class="weui_media_box weui_media_appmsg">';
+		s+='	<div class="weui_media_hd">';
+		s+='		<img class="weui_media_appmsg_thumb" src="'+a.face+'">';
+		s+='	</div>';
+		s+='	<div class="weui_media_bd">';
+		s+='		<h4 class="weui_media_title">'+a.name+'</h4>';
+		s+='		<p class="weui_media_desc">'+a.deptname+'('+a.position+')</p>';
+		s+='	</div>';
+		s+='</a>';
+		if(!cbo){
+			$('#list').append(s);
+		}else{
+			$('#searchlist').append(s);
+		}
+	},
+	//显示应用
+	showagent:function(){
+		var data = this.data.agenharr;
+		var i,len,s='',ois=0,ty,a;
+		oshow = $('#agenhlist');
+		$('#agenhlistno').hide();
+		for(ty in data){
+			a  = data[ty];
+			len= a.length;
+			s+='<div class="agentp">'+ty+'('+len+')</div><div style="background-color:white" class="weui_grids">';
+			for(i=0;i<len;i++){
+				s+=this.showagents(a[i]);
+			}
+			s+='</div>';
+		}
+		oshow.html(s);
+		if(s==''){
+			$('#agenhlistno').show();
+		}
+		this.changestotl('agentstotal_',1);
+	},
+	showagents:function(d){
+		var s='';
+		var s1=d.stotal;if(!s1)s1='';
+		s='<a href="javascript:;" onclick="im.openagent('+d.id+')" class="weui_grid">';
+		s+='<div class="weui_grid_icon">';
+			s+='	<img src="'+d.face+'">';
+		s+='	<span id="agentstotal_'+d.id+'" class="badge">'+s1+'</span>';
+		s+='</div>';
+		s+='<p class="weui_grid_label">';
+		s+=' '+d.name+'';
+		s+='</p>';
+		s+='</a>';
+		agentarr[d.id]=d;
+		return s;
+	},
+	openagent:function(id){
+		var d=agentarr[id];
+		if(!d)return;
+		this.changestotl('agentstotal_',1);
+		this.biaoyd('agenh', id);
+		js.location(d.agenhurlm);
+	},
+	changestotl:function(jg,lx){
+		if(!jg)jg='histotal_';
+		var o=$("span[id^='"+jg+"']"),oi=0,i,len=o.length,v1;
+		for(i=0;i<len;i++){
+			v1=$(o[i]).text();
+			if(v1=='')v1='0';
+			oi=oi+parseFloat(v1);
+		}
+		if(oi==0)oi='';
+		$('#stotal_ss'+lx+'').html(''+oi);
+	},
+	showmenu:function(){
+		js.actionsheet({
+			data:[{
+				name:'<img src="'+this.userinfo.face+'" align="absmiddle" height="30" width="30"> '+this.userinfo.name+'',lx:0
+			},{
+				name:'刷新数据',lx:1
+			},{
+				name:'创建会话',lx:6
+			},{
+				name:'切换单位',lx:5
+			},{
+				name:'退出登录',lx:3
+			}],
+			onclick:function(a){
+				var lx=a.lx;
+				if(lx==0)im.changetab(3);
+				if(lx==1)im.reload();
+				if(lx==3)im.loginout();
+				if(lx==5)im.changedanwei();
+				if(lx==6)im.createchat();
+			}
+		});
+	},
+	reload:function(lx){
+		if(this.index==2){
+			this.reloaduser(lx);
+		}else{
+			this.initload(lx);
+		}
+	},
+	getheight:function(ss){
+		var hei = 0;if(!ss)ss=0;
+		if(get('header_title'))hei+=50;
+		if(get('footerdiv'))hei+=55;
+		return $(window).height()-hei+ss;
+	},
+	resiezess:function(){
+		var hei = im.getheight();
+		$('#mainbody').css('height',''+hei+'px');
+		if(im.touchobj)im.touchobj.resize();
+	},
+	loginout:function(){
+		js.confirm('确定要退出吗？',function(jg){
+			if(jg=='yes')im.loginouts();
+		});
+	},
+	loginouts:function(){
+		js.loading('退出中...');
+		js.ajax(this.getapiurl('index_loginout'),{}, function(ret){
+			js.setoption(TOKENKEY);
+			js.msgok('退出成功',function(){
+				$('#logindiv').show();
+				$('#indexdiv').hide();
+			},1);	
+		});	
+	},
+	changeuser:function(lx){
+		$("#userlx div").removeClass('active');
+		$("#userlx_"+lx+"").addClass('active');
+		$("div[temp='user']").hide();
+		$("div[temp='user']:eq("+lx+")").show();
+	},
+	
+	//----------通讯录搜索-------------
+	initsearch:function(){
+		$('#search_input').keydown(function(){
+			im.sousousou();
+		});
+		$('#search_input').keyup(function(){
+			im.sousousou();
+		});
+	},
+	searchuser:function(){
+		$('#search_bar').addClass('weui_search_focusing');
+		$('#search_input').focus();
+	},
+	blursou:function(){
+		var val = $('#search_input').val();
+		if(val==''){
+			$('#search_bar').removeClass('weui_search_focusing');	
+			this.hitsoubo(false);
+		}
+	},
+	searchcancel:function(){
+		$('#search_input').val('').blur();
+		this.blursou();
+	},
+	souclear:function(){
+		$('#search_input').val('').focus();
+	},
+	sousousou:function(){
+		clearTimeout(this.sousousoutime);
+		this.sousousoutime=setTimeout('im.sousousous()',500);
+	},
+	hitsoubo:function(bo){
+		if(!bo){
+			$('#userdao').show();
+			$('#deptlist').show();
+			$('#list').show();
+			$('#searchlist').hide();
+		}else{
+			$('#userdao').hide();
+			$('#deptlist').hide();
+			$('#list').hide();
+			$('#searchlist').show().html('');
+		}
+	},
+	sousousous:function(){
+		var val = $('#search_input').val();
+		if(val==''){
+			this.hitsoubo(false);
+			return;
+		}
+		this.hitsoubo(true);
+		var i,a=userarr,len=a.length;
+		for(i=0;i<len;i++){
+			if(a[i].name.indexOf(val)>-1 || a[i].deptname.indexOf(val)>-1 || a[i].position.indexOf(val)>-1 || a[i].pingyin.indexOf(val)==0){
+				this.showlist(a[i],true);
+			}
+		}
+	},
+	
+	//切换单位
+	changedanwei:function(){
+		js.location('unit.html');
+	},
+	
+	gerenset:function(){
+	},
+	
+	openuinfo:function(id){
+		if(!id)id = this.useainfo.id;
+		js.location('info.html?id='+id+'');
+	},
+	openguser:function(ty,id,na){
+		if(ty=='agenh'){
+			this.openagent(id);
+			return;
+		}
+		if(!na)na = '';
+		var url = 'chat.html?id='+id+'&type='+ty+'';
+		if(na)url+='&name='+jm.base64encode(na)+'';
+		js.location(url);
+	},
+	
+	createchat:function(){
+		js.prompt('创建会话','请输入会话名称', function(jg,txt){
+			if(jg=='yes' && txt)im.createchats(txt);
+		});
+	},
+	createchats:function(txt){
+		js.loading('创建中...');
+		js.ajax(this.getapiurl('reim_createchat'),{name:strreplace(txt)},function(ret){
+			js.msgok('创建成功，请到联系人下查看');
+			im.reloaduser('none');
+		},'post', function(msg){
+			js.msgerror(msg);
+		});
+	}
+}	
+</script>
+</head>
+
+
+<body>
+
+<div id="logindiv" style="display:none">
+
+	<div class="hd">
+		<div><img id="myface" onclick="location.reload()" src="../images/logo.png"></div>
+	</div>
+	<div class="weui_cells weui_cells_form">
+		<div class="weui_cell">
+			<div class="weui_cell_hd"><label class="weui_label">帐号</label></div>
+			<div class="weui_cell_bd weui_cell_primary">
+				<input class="weui_input" type="text" value="" onkeyup="if(event.keyCode==13)getpassobj().focus()" id="adminuser" maxlength="100" placeholder="输入手机号/用户名/邮箱"/>
+			</div>
+		</div>
+		
+		<div class="weui_cell">
+			<div class="weui_cell_hd"><label class="weui_label">密码</label></div>
+			<div class="weui_cell_bd weui_cell_primary">
+				<input class="weui_input" type="password" onkeyup="if(event.keyCode==13)loginsubmit(0)" value="" placeholder="请输入密码"/>
+			</div>
+		</div>
+	</div>
+	<div class="weui_btn_area">
+		<input class="weui_btn weui_btn_primary" type="button" onclick="loginsubmit(0)" value="登录" id="btn0">
+	</div>
+	
+	<div class="blank10"></div>
+	<div align="center"><span class="r-click" onclick="js.gotourl('reg.html')">注册</span> &nbsp;<font color=#cccccc>|</font>&nbsp; <span class="r-click" onclick="js.gotourl('find.html')">忘记密码</span></div>
+	
+	<div style="display:none" class="page_desc">Copyright &copy;2017 信呼OA云平台</div>
+
+</div>
+
+<div id="indexdiv" style="display:none">
+	
+	<div id="headertop">
+		<div class="r-header">
+			<span class="r-position-left"><div class="r-header-btn" id="indexface" onclick="im.changetab(3)" style="padding:9px;overflow:hidden;width:auto;"><img style="border-radius:50%;height:30px;width:30px" id="myfacesets" src="../images/noface.png"></div></span>
+			<div onclick="location.reload()" id="header_title" class="r-header-text">信呼OA云平台</div>
+			<span onclick="im.showmenu()" class="r-position-right r-header-btn"><i class="icon-plus"></i></span>
+		</div>
+		<div class="blank50"></div>
+	</div>
+	
+	<div id="mainbody" class="r-touch" style="height:350px;position:relative;">
+	
+		<div index="main" id="main_index0">
+			<div  class="weui_panel"><div id="historylist"></div></div>
+			<div id="historylist_tems" style="padding-top:40%;text-align:center;color:#cccccc"><span style="font-size:50px"><i class="icon-comment-alt"></i></span><br>暂无消息</div>
+		</div>
+		
+		<div index="main" style="display:none" id="main_index1">
+			<div style="margin-top:10px" class="weui_panel weui_panel_access">
+				<div class="weui_panel_bd">
+					<a href="javascript:;" class="weui_media_box weui_media_appmsg">
+						<div class="weui_media_hd">
+							<img class="weui_media_appmsg_thumb" id="myshow_logo" src="../images/logo.png">
+						</div>
+						<div class="weui_media_bd">
+							<h4 class="weui_media_title" id="myshow_companyname"></h4>
+							<p id="myshow_companynum" class="weui_media_desc"></p>
+						</div>
+					</a>
+				</div>
+			</div>
+			<div id="agenhlist"></div>
+			<div id="agenhlistno" style="padding-top:40%;text-align:center;color:#cccccc">没有找到应用</div>
+		</div>
+		
+		<div index="main" style="background-color:white;display:none" id="main_index2">
+
+			<div class="weui_search_bar" id="search_bar">
+				<form onclick="im.searchuser()" class="weui_search_outer" onsubmit="im.sousousou();return false;">
+					<div class="weui_search_inner">
+						<i class="weui_icon_search"></i>
+						<input type="search" onblur="im.blursou()" class="weui_search_input" id="search_input" placeholder="搜索联系人" >
+						<a onclick="im.souclear()" class="weui_icon_clear"></a>
+					</div>
+					<label for="search_input" class="weui_search_text" id="search_text">
+						<i class="weui_icon_search"></i>
+						<span>搜索联系人</span>
+					</label>
+				</form>
+				<a onclick="im.searchcancel()" style="color:#336699" class="weui_search_cancel">取消</a>
+			</div>
+			
+			<div id="userlx" class="r-tab">
+				<div id="userlx_0" onclick="im.changeuser(0)" class="r-tab-item active">联系人<span id="userstotal">(0)</span></div>
+				<div id="userlx_1" onclick="im.changeuser(1)" class="r-tab-item">会话<span id="groupstotal">(0)</span></div>
+				
+			</div>
+			
+			<div id="userlistdiv" temp="user" style="margin-top:0">
+				<div class="weui_daohang r-border-b" id="userdao">
+				</div>
+				<div class="weui_panel_bd">
+					<div id="list" class="weui_panel weui_panel_access"></div>
+					<div id="deptlist"></div>
+					<div id="searchlist" class="weui_panel weui_panel_access"></div>
+				</div>	
+			</div>
+			<div class="weui_panel" temp="user" style="margin-top:0;display:none">
+				<div class="weui_panel_bd r-border-t">
+					<div class="weui_media_box weui_media_small_appmsg">
+						<div id="grouplist" class="weui_cells weui_cells_access"></div>
+					</div>
+				</div>
+			</div>
+		</div>
+		
+		<div index="main" style="display:none"  id="main_index3">
+			
+			<div style="margin-top:10px" class="weui_panel weui_panel_access">
+				<div class="weui_panel_bd">
+					<a href="javascript:;" onclick="im.openuinfo()" class="weui_media_box weui_media_appmsg">
+						<div class="weui_media_hd">
+							<img class="weui_media_appmsg_thumb" id="myfaceset" src="../images/logo.png">
+						</div>
+						<div class="weui_media_bd">
+							<h4 class="weui_media_title" id="myshow_name">...</h4>
+							<p id="myshow_deptname" class="weui_media_desc"></p>
+						</div>
+					</a>
+				</div>
+			</div>
+			
+			<div id="companyinfo">		
+				<div class="weui_cells weui_cells_access">
+					<div class="weui_cell">
+						<div class="weui_cell_bd weui_cell_primary">
+							<p style="color:#888888">职位</p>
+						</div>
+						<span id="myshow_position" class="weui_cell_right"></span>
+					</div>
+					<div class="weui_cell">
+						<div class="weui_cell_bd weui_cell_primary">
+							<p style="color:#888888">手机</p>
+						</div>
+						<span id="myshow_mobile" class="weui_cell_right"></span>
+					</div>
+					<div class="weui_cell">
+						<div class="weui_cell_bd weui_cell_primary">
+							<p style="color:#888888">邮箱</p>
+						</div>
+						<span id="myshow_email" class="weui_cell_right"></span>
+					</div>
+				</div>
+			</div>
+
+			
+			
+			<div class="weui_cells weui_cells_access">
+				<div onclick="im.gerenset()" class="weui_cell">
+					<div class="weui_cell_bd weui_cell_primary">
+						设置
+					</div>
+					<span class="weui_cell_ft"></span>
+				</div>
+				<div onclick="im.changedanwei()" class="weui_cell">
+					<div class="weui_cell_bd weui_cell_primary">
+						切换单位
+					</div>
+					<span class="weui_cell_ft"></span>
+				</div>
+			</div>
+			
+			
+			<div class="weui_cells weui_cells_checkbox">
+				<label class="weui_cell weui_check_label" for="wxtxchecked">
+					<div class="weui_cell_hd">
+						<input type="checkbox" disabled class="weui_check" id="wxtxchecked" checked>
+						<i class="weui_icon_checked"></i>
+					</div>
+					<div class="weui_cell_bd weui_cell_primary">
+						<p>接收消息提醒</p>
+					</div>
+				</label>
+			</div>
+			
+
+			
+			<div class="weui_btn_area">
+				<input class="weui_btn weui_btn_warn" type="button" onclick="im.loginout()" value="退出登录">
+			</div>
+			<div style="height:10px"></div>
+		</div>
+	</div>
+
+	<div style="height:55px; overflow:hidden"></div>	
+	<div id="footerdiv" style="height:55px;overflow:hidden;z-index:2;position:fixed;" class="weui_tabbar">
+		<a href="javascript:;" onclick="im.changetab(0)" class="weui_tabbar_item weui_bar_item_on">
+			<span id="stotal_ss0" class="badge"></span>
+			<div class="weui_tabbar_icon">
+				<i class="icon-comment-alt"></i>
+			</div>
+			<p style="margin-top:1px" class="weui_tabbar_label">消息</p>
+		</a>
+		<a href="javascript:;" onclick="im.changetab(1)" class="weui_tabbar_item">
+			<span id="stotal_ss1" class="badge"></span>
+			<div class="weui_tabbar_icon">
+				<i class="icon-th-large"></i>
+			</div>
+			<p style="margin-top:1px" class="weui_tabbar_label" id="agenh_tabbar">应用</p>
+		</a>
+		<a href="javascript:;" onclick="im.changetab(2)" class="weui_tabbar_item">
+			<div class="weui_tabbar_icon">
+				<i class="icon-user"></i>
+			</div>
+			<p style="margin-top:1px" class="weui_tabbar_label">联系人</p>
+		</a>
+		<a href="javascript:;" onclick="im.showmenu()" class="weui_tabbar_item">
+			<div class="weui_tabbar_icon">
+				<i class="icon-cog"></i>
+			</div>
+			<p style="margin-top:1px" class="weui_tabbar_label">更多</p>
+		</a>
+	</div>
+</div>
+
+<script type="text/javascript" src="../res/plugin/jquery-rockdoupull.js"></script>
+</body>
+</html>

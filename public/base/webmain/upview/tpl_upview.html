@@ -1,0 +1,89 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>文件预览</title>
+<script type="text/javascript" src="res/js/jquery.js"></script>
+<script>
+var ismobile = <?=$da['ismobile']?>;
+var fileid  = <?=$da['frs']['id']?>;
+var showkey = '<?=$da['showkey']?>';
+function zhuang(id,o){
+	var o1 = $(o).parent();
+	var url = '?m=upview&a=zhuang&id='+id+'&showkey='+showkey+'';
+	$.getJSON(url,function(det){
+		if(det.success){
+			o1.html('<font color="green">√ 已发送，大概在<font color=red id="times">20</font>秒后可刷新查看</font>，<a href="javascript:;" class="zhu" onclick="location.reload()">[刷新看一下]</a>');
+			timeshow(det.data.times);
+		}else{
+			o1.html('<font color="red">'+det.msg+'</font>');
+		}
+	});
+}
+function timeshow(s){
+	$('#times').html(s);
+	if(s==0){
+		setmsg('预览请求处理超时转换失败','red');
+		return;
+	}
+	var url = '?m=upview&a=officestatus&id='+fileid+'&showkey='+showkey+'';
+	$.getJSON(url,function(det){
+		if(det.success){
+			var da = det.data;
+			if(da.status=='1'){
+				if(da.ftype=='1'){
+					doanpdf()//下载
+				}else{
+					location.reload();
+				}
+			}else{
+				setTimeout('timeshow('+(s-1)+')',1000);
+			}
+		}else{
+			setmsg(det.msg,'red');
+		}
+	});
+}
+
+function doanpdf(){
+	setmsg('已经转化完成正在下载中...','#ff6600');
+	var url = '?m=upview&a=officedown&id='+fileid+'&showkey='+showkey+'';
+	$.getJSON(url,function(det){
+		if(det.success){
+			location.reload();
+		}else{
+			setmsg(det.msg,'red');
+		}
+	});
+}
+
+function downxia(id){
+	var url = '?m=upview&a=down&showkey='+showkey+'';
+	location.href=url;
+}
+
+function setmsg(msg,col){
+	var s = '<font color="'+col+'">'+msg+'</font>';
+	$('#showtishi').html(s);
+}
+</script>
+<style>
+*{padding:0px;margin:0px;list-style-type:none;font-family:微软雅黑,Verdana, Geneva, sans-serif}
+a.webbtn:link,a.webbtn:visited,.webbtn{color:#ffffff;opacity:0.8; background-color:#1389D3; padding:5px 10px; border:none; cursor:pointer;font-size:14px}
+.webbtn:disabled{background-color:#aaaaaa; color:#eeeeee}
+.webbtn:hover{box-shadow:0px 0px 5px rgba(0,0,0,0.3);opacity:1}
+</style>
+</head>
+<body style="padding:0px;margin:0px;">
+
+<div align="center"  style="font-size:16px;margin-top:40px;padding:10px">
+	<div>无法预览[<?=$da['frs']['fileext']?>]的类型。</div>
+	<div style="margin-top:15px">如是文档类型需要自己转pdf文件上传才能预览。</div>
+	<div style="margin-top:15px"><button type="button" style="padding:15px;border-radius:10px;background:green" onclick="downxia(<?=$da['frs']['id']?>, this)" class="webbtn">↓直接下载</button></div>
+	
+	<div id="showtishi" style="margin-top:15px">
+		<button type="button" style="border-radius:5px" onclick="zhuang(<?=$da['frs']['id']?>, this)" class="webbtn">发送预览请求</button>&nbsp; <a class="zhu" href="javascript:;" onclick="location.reload()">[刷新]</a></div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,1 @@
+{"total":1,"rows":[{"id":"1","username":"admin","nickname":"Admin","avatar":"\/assets\/img\/avatar.png","email":"admin@fastadmin.net","loginfailure":"0","logintime":"1556174422","createtime":"1492186163","updatetime":"1556174422","status":"normal","groups":"1","groups_text":"Admin group"}]}

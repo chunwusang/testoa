@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=0">
+<title>加载中...</title>
+<link rel="stylesheet" type="text/css" href="../css/weui.min.css"/>
+<link rel="stylesheet" type="text/css" href="../css/rui.css"/>
+<script type="text/javascript" src="../js/jquery.js"></script>
+<script type="text/javascript" src="../js/jsm.js"></script>
+<script type="text/javascript" src="../js/base64-min.js"></script>
+<style>
+.weui_grid:before{border:none}
+.weui_grid{padding:8px;width:20%}
+</style>
+<script>
+var baseurl = '/base';
+function initbody(){
+	if(js.iswxbro || js.isdingbro)$('#headertop').remove();
+	cnum = js.request('cnum', js.getoption('nowcnum'));
+	type = js.request('type','user');
+	if(type!='group')$('#huihuainfo').remove();
+	var na = js.request('name');
+	if(na){
+		na = jm.base64decode(na);
+		chatname = na;
+		im.settitle(na);
+	}
+	im.init();
+}
+
+
+var im={
+	init:function(){
+		this.type = type;
+		this.gid = js.request('id');
+		js.loading();
+		js.ajax(this.getapiurl('reim_chatinfo'),{type:this.type,gid:this.gid}, function(ret){
+			im.initshow(ret.data);
+		});
+	},
+	initshow:function(da){
+	
+		var info = da.receinfo;
+		receinfo = info;
+		im.settitle(info.name);
+		
+		this.userlist = da.userlist;
+		this.showuser(0);
+		$('#myshow_recordshu').html(da.recordshu+'条');
+		
+		if(da.type!='group')return;
+		$('#huihuainfo').show();
+		$('#myshow_createname').html(''+da.createinfo.deptname+'/'+da.createinfo.name+'');
+		$('#myshow_usershu').html(''+info.usershu+'人');
+		if(!info.gonggao)info.gonggao='暂无';
+		$('#myshow_gonggao').html(''+info.gonggao+'');
+		
+		if(info.deptid==0){
+			$('#exitdiv').show();
+			if(!receinfo.isin)get('exitbtn').value='你已不在此会话上了'
+		}
+	},
+	showuser:function(lx){
+		var a = this.userlist,len=0,i;
+		var s = '';
+		$('#alldivse').remove();
+		var max = 28; //最多显示28个
+		if(lx==1)max=99999;
+		if(a){
+			len = a.length;
+			for(i=0;i<len && i<max;i++)s+=this.showagents(a[i]);
+		}
+		if(receinfo.isin){
+			s+=this.showagents({
+				id:0,
+				'name':'邀请..',face:'/images/jia.png'
+			});
+		}
+		$('#userlistdiv').html(s);
+		if(len>max)$('#userlistdiv').after('<div onclick="im.showuser(1)" id="alldivse" align="center" style="color:#888888;padding:10px;background:white">查看全部人员</div>');
+	},
+	getapiurl:function(lx){
+		var url = 'api/we/'+lx+'';
+		if(cnum!='')url+='/'+cnum+'';
+		return url;
+	},
+	settitle:function(na){
+		document.title = na;
+		$('#header_title').html(na);
+		$('#myshow_chatname').html(na);
+	},
+	showagents:function(d){
+		var s='';
+		s='<a href="javascript:;" onclick="im.openuser('+d.id+',\''+d.name+'\')" class="weui_grid">';
+		s+='<div class="weui_grid_icon">';
+		s+='	<img src="'+d.face+'">';
+		s+='</div>';
+		s+='<p class="weui_grid_label">';
+		s+=' '+d.name+'';
+		s+='</p>';
+		s+='</a>';
+		return s;
+	},
+	openuser:function(id,nas){
+		if(id==0){
+			if(!receinfo.isin)return;
+			if(receinfo.deptid>0){
+				js.alert('此会话是跟部门关联，不需要邀请');
+				return;
+			}
+			$('body').chnageuser({
+				title:'邀请...',
+				changetype:'deptusercheck',
+				onselect:function(sna,sid){
+					im.addchatuser(sid);
+				}
+			});
+		}else{
+			js.location('info.html?id='+id+'&name='+jm.base64encode(nas)+'');
+		}
+	},
+	addchatuser:function(sid){
+		if(sid=='')return;
+		js.loading('添加邀请中...');
+		js.ajax(this.getapiurl('reim_chatadduser'),{type:this.type,gid:this.gid,sid:sid}, function(ret){
+			var da = ret.data;
+			js.msgok('成功邀请'+da.addshu+'人');
+			im.initshow(da);
+		},'post');
+	},
+	editname:function(){
+		if(!receinfo.isin)return;
+		var ne = $('#myshow_chatname').text();
+		js.prompt('修改会话名称','请输入新的会话名称', function(jg,txt){
+			if(jg=='yes' && txt && txt!=ne){
+				im.settitle(txt);
+				js.msgok('修改成功');
+				im.setname(txt);
+			}
+		},ne);
+	},
+	setname:function(na){
+		js.ajax(this.getapiurl('reim_editchatname'),{type:this.type,gid:this.gid,name:na}, false,'post');
+	},
+	editgong:function(){
+		if(!receinfo.isin)return;
+		var ne = $('#myshow_gonggao').text();
+		if(ne=='暂无')ne='';
+		js.prompt('修改公告','请输入新的公告内容', function(jg,txt){
+			if(jg=='yes' && txt!=ne){
+				js.msgok('修改成功');
+				$('#myshow_gonggao').html(txt);
+				im.setgong(txt);
+			}
+		},ne);
+	},
+	setgong:function(na){
+		js.ajax(this.getapiurl('reim_editchatgong'),{type:this.type,gid:this.gid,cont:na}, false,'post');
+	},
+	exitchat:function(o1){
+		if(!receinfo.isin)return;
+		var val = o1.value;
+		js.confirm('确定要'+val+'吗？', function(jg){
+			if(jg=='yes'){
+				im.exitchats();
+			}
+		});
+	},
+	exitchats:function(){
+		js.loading();
+		js.ajax(this.getapiurl('reim_exitchat'),{gid:this.gid}, function(ret){
+			js.msgok('已成功退出会话', function(){
+				js.back();
+			},1);
+		},'get', function(msg){
+			js.msgerror(msg);
+		});
+	},
+	clearrecord:function(){
+		js.confirm('确定要清空在此会话中的聊天记录吗？', function(jg){
+			if(jg=='yes'){
+				im.clearrecords();
+			}
+		});
+	},
+	clearrecords:function(){
+		js.loading('清空中...');
+		js.ajax(this.getapiurl('reim_clearrecord'),{type:this.type,gid:this.gid}, function(ret){
+			js.msgok('总共清空'+ret.data+'条');
+		},'get', function(msg){
+			js.msgerror(msg);
+		});
+	}
+}
+
+</script>
+</head>
+
+
+<body>
+
+<div id="headertop">
+	<div class="r-header">
+		<div onclick="js.reload()" id="header_title" class="r-header-text"></div>
+		<span onclick="js.back()" class="r-position-left r-header-btn"><i class="icon-chevron-left"></i></span>
+	</div>
+	<div class="blank50"></div>
+	</div>
+<div>
+
+<div class="weui_cells_title">会话上人员</div>
+<div style="background-color:white;" id="userlistdiv" class="weui_grids">
+</div>
+
+
+	
+	
+<div id="huihuainfo" style="display:none">	
+	<div class="weui_cells_title">会话信息</div>
+	<div class="weui_cells weui_cells_access">
+		<div onclick="im.editname()" class="weui_cell">
+			<div class="weui_cell_bd weui_cell_primary">
+				<p >会话名称</p>
+			</div>
+			<span id="myshow_chatname" style="color:#888888" class="weui_cell_right"></span>
+		</div>
+		<div class="weui_cell">
+			<div class="weui_cell_bd weui_cell_primary">
+				<p >会话人数</p>
+			</div>
+			<span id="myshow_usershu" style="color:#888888" class="weui_cell_right">1人</span>
+		</div>
+		<div class="weui_cell">
+			<div class="weui_cell_bd weui_cell_primary">
+				<p >创建人</p>
+			</div>
+			<span id="myshow_createname" style="color:#888888" class="weui_cell_right"></span>
+		</div>
+		
+		<div  onclick="im.editgong()" class="weui_cell"  style="display:block " >
+			<div class="weui_cell_bd weui_cell_primary">
+				<p>会话公告</p>
+			</div>
+			<p id="myshow_gonggao" style="color:#888888;padding-left:20px">暂无</p>
+		</div>
+	</div>
+</div>
+
+<div>		
+	<div class="weui_cells weui_cells_access">
+		<div onclick="im.clearrecord()" class="weui_cell">
+			<div class="weui_cell_bd weui_cell_primary">
+				<p >清空聊天记录</p>
+			</div>
+			<p id="myshow_recordshu" style="color:#888888;padding-left:20px"></p>
+		</div>
+	</div>
+</div>
+
+<div id="exitdiv" style="display:none" class="weui_btn_area">
+	<input class="weui_btn weui_btn_warn" id="exitbtn" type="button" onclick="im.exitchat(this)" value="退出此会话">
+</div>
+<div style="height:10px"></div>
+
+
+<script src="/res/js/jquery-changeuser.js"></script>
+<link rel="stylesheet" type="text/css" href="../res/fontawesome/css/font-awesome.min.css">
+
+</body>
+</html>

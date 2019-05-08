@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=0">
+<title>加载中...</title>
+<link rel="stylesheet" type="text/css" href="../css/weui.min.css"/>
+<link rel="stylesheet" type="text/css" href="../css/rui.css"/>
+<link rel="stylesheet" type="text/css" href="../css/chat.css">
+<script type="text/javascript" src="../js/jquery.js"></script>
+<script type="text/javascript" src="../js/jsm.js"></script>
+<script type="text/javascript" src="../js/base64-min.js"></script>
+<script type="text/javascript" src="../res/js/strformat.js"></script>
+<script type="text/javascript" src="../js/workerman_chat/test_chat.js"></script>
+<style>
+body,html{overflow:hidden}
+.showblanks{padding:10px;color:#aaaaaa;font-size:12px;text-align:center}
+.qipao .qipaocont{font-size:16px}
+.qipao .qipaoface{}
+</style>
+<script>
+var baseurl = '/base';
+function initbody(){
+	if(js.iswxbro || js.isdingbro)$('#headertop').remove();
+	cnum = js.request('cnum', js.getoption('nowcnum'));
+	type = js.request('type','user');//=group群聊,user单聊
+	var na = js.request('name');
+	$('#header_rightbtn').show();
+	if(na){
+		na = jm.base64decode(na);
+		chatname = na;
+		im.settitle(na);
+	}
+	im.init();
+}
+
+
+var im={
+	minid:999999999,
+	init:function(){
+		strformat.emotspath='/';
+		this.type = type;
+		this.gid = js.request('id');
+		this.showobj  = $('#showview');
+		this.inputobj = $('#contentss');
+		this.loadci 	= 0;
+		this.loaddata();
+		this.readinforshow();
+		
+		im.touchobj = $('#showview').rockdoupull({
+			downbgcolor:'',
+			downbool:true,
+			ondownsuccess:function(){
+				im.dropdown_success();
+			}
+		});
+		this.resizehei();
+		$(window).resize(this.resizehei);
+		
+	},
+	getapiurl:function(lx){
+		var url = 'apijct/we/'+lx+'';
+		if(cnum!='')url+='/'+cnum+'';
+		return url;
+	},
+	submitinput:function(){
+		try{im.sendcont();}catch(e){}
+		return false;
+	},
+	getheight:function(ss){
+		var hei = 50;if(!ss)ss=0;
+		if(get('header_title'))hei+=50;
+		return $(window).height()-hei+ss;
+	},
+	resizehei:function(){
+		var h = im.getheight();
+		im.showobj.css('height',''+h+'px');
+		im.touchobj.resize();
+	},
+	loaddata:function(o1, iref){
+		if(this.boolload)return;
+		var iref = (!iref)?false:true;
+		var minid= 0;
+		if(iref)minid=this.minid;
+		if(o1)$(o1).html('<img src="../images/loadings.gif" height="14" width="15" align="absmiddle"> 加载中...');
+		this.boolload 	= true;
+		this.isshangla 	= false;
+		if(this.loadci==0)js.loading();
+		js.ajax(this.getapiurl('reim_getrecord'),{type:this.type,gid:this.gid,minid:minid,loadci:this.loadci},function(ret){
+			if(o1)$(o1).html('');
+			var da = ret.data;
+			if(im.loadci==0){
+				sendinfo 	= da.sendinfo;
+				receinfo	= da.receinfo;
+				chatname 	= receinfo.name;
+				var nas = chatname;
+				if(da.type=='group')nas+='('+da.usershu+')';
+				im.settitle(nas);
+				var uurl = da.baseurl+'/?m=upfilejs';
+				baseurl  = da.baseurl;
+				$.getScript(uurl);
+			}
+			im.loadci++;
+			im.boolload = false;
+			im.loaddatashow(da, iref);
+		},'get');
+	},
+	settitle:function(na){
+		document.title = na;
+		$('#header_title').html(na);
+	},
+	readinforshow:function(){
+	//	setTimeout('im.readinforshows()',1000*10);
+	},
+	
+	//定时刷新
+	readinforshows:function(){
+		var minid=this.minid;
+
+		js.ajax(this.getapiurl('reim_getrecord'),{type:this.type,gid:this.gid,minid:0,lastdt:this.lastdt,loadci:this.loadci},function(ret){
+			im.loaddatashow(ret.data, false, true);
+			im.readinforshow();
+		},'get');
+	},
+	loaddatashow:function(ret,isbf, isls){
+		var a 		= ret.rows;
+		this.lastdt = ret.nowdt;
+		var i,len 	= a.length,cont,lex,nas,fase,nr,d,na=[],rnd,sid;
+		$('#loadmored').remove();
+		if(isbf){
+			if(len>0)this.showobj.prepend('<div class="showblanks">---------↑以上是新加载---------</div>');
+			na = a;
+		}else{
+			for(i= len-1; i>=0; i--)na.push(a[i]);
+		}
+		for(i= 0; i<len; i++){
+			d   = na[i];
+			sid = d.id;
+			lex = 'right';
+			nas = '我';
+			fase= sendinfo.face;
+			if(d.sendid!=sendinfo.id){
+				lex='left';
+				nas= d.sendname;
+				fase= d.face;
+			}
+			nr  = this.contshozt(d.filers);
+			if(nr=='')nr= jm.base64decode(d.cont);
+			rnd = 'mess_'+sid+'';
+			cont= strformat.showqp(lex,nas,d.optdt,nr ,'', fase, rnd);
+			if(!isbf){
+				this.addcont(cont, isbf);
+			}else{
+				this.showobj.prepend(cont);
+			}
+			if(sid<this.minid)this.minid=sid;
+		}
+		if(len>0 && !isls){
+			var s = '<div id="histordiv" class="showblanks" >';
+			if(ret.wdtotal==0){
+				s+='---------↑以上是历史记录---------';
+				if(len>=5){
+					//this.showobj.prepend('<div id="loadmored" class="showblanks" ><a href="javascript:;" onclick="im.loadmoreda(this)">点击加载更多...</a></div>');
+					this.isshangla = true;
+				}
+			}else{
+				s+='---↑以上是历史,还有未读信息'+ret.wdtotal+'条,<a href="javascript:;" onclick="im.loaddata(this)">点击加载</a>---';
+			}
+			s+='</div>';
+			if(!isbf)this.addcont(s);
+			if(isbf)this._addclickf();
+		}
+		if(im.touchobj)im.touchobj.ondownok();
+	},
+	dropdown_success:function(){
+		if(this.isshangla){
+			this.loadmoreda(false);
+		}else{
+			setTimeout(function(){im.touchobj.ondownok()},1000);
+		}
+	},
+	loadmoreda:function(o1){
+		this.loaddata(o1, true);
+	},
+	addcont:function(cont, isbf){
+		var o	= this.showobj;
+		if(cont){if(isbf){o.prepend(cont);}else{o.append(cont);}}
+		clearTimeout(this.scrolltime);
+		this.scrolltime	= setTimeout(function(){
+			im.showobj.animate({scrollTop:get('showview').scrollHeight},100);
+			im._addclickf();
+		}, 50);
+	},
+	_addclickf:function(){
+		var o = this.showobj.find('img[fid]');
+		o.unbind('click');
+		o.click(function(){
+			im.clickimg(this);
+		});
+	},
+	clickqipao:function(o1){
+		return;
+		var id = o1.id;
+		js.showmenu({
+			data:[{'name':'删除','lx':0}]
+		});
+	},
+	clickimg:function(o1){
+		var o=$(o1);
+		var fid=o.attr('fid');
+		var src = o1.src.replace('_s.','.');
+		$.imgview({url:src,ismobile:true});
+	},
+	contshozt:function(d){
+		if(!d)return '';
+		d.imgpath = baseurl+'/'+d.thumbpath;
+		return strformat.contshozt(d,'/');
+	},
+	sendcont : function(ssnr){
+		if(js.ajaxbool)return;
+		js.msg('none');
+		var o	= this.inputobj;
+		var nr	= strformat.sendinstr(o.val());
+		nr		= nr.replace(/</gi,'&lt;').replace(/>/gi,'&gt;').replace(/\n/gi,'<br>');
+		if(ssnr)nr=ssnr;
+		if(isempt(nr))return false;
+		var conss = jm.base64encode(nr);
+		if(conss.length>3998){
+			js.msg('msg','发送内容太多了');
+			return;
+		}
+		var nuid= js.now('time'),optdt = js.serverdt();
+		var cont= strformat.showqp('right','我',optdt, nr, nuid, sendinfo.face);
+		this.addcont(cont);
+		o.val('').focus();
+		this.sendconts(conss, nuid, optdt, 0);
+		return false;
+	},
+	sendconts:function(conss, nuid, optdt, fid){
+		var d 	 = {cont:conss,gid:this.gid,type:this.type,nuid:nuid,optdt:optdt,fileid:fid};
+		js.ajax(this.getapiurl('reim_sendinfor'),d,function(ret){
+			im.sendsuccess(ret.data,nuid);
+		},'post',function(){
+			im.senderror(nuid);
+		});
+	},
+	senderror:function(nuid){
+		js.ajaxbool = false;
+		get(nuid).src='/images/error.png';
+		get(nuid).title='发送失败';
+	},
+	sendsuccess:function(d,nuid){
+		this.bool = false;
+		if(!d.id){
+			this.senderror(nuid);
+			return;
+		}
+		$('#'+d.nuid+'').remove();
+		var bo = false;
+		d.messid=d.id;
+		d.face  = sendinfo.face;
+	},
+	addinput:function(s){
+		var val = this.inputobj.val()+s;
+		this.inputobj.val(val).focus();
+	},
+	showemit:function(){
+		var da = [];
+		var a = strformat.emotsarr,i;
+		for(i=1;i<50;i++)da.push({name:'&nbsp; <img src="/images/im/emots/qq/'+(i-1)+'.gif" align="absmiddle">&nbsp;'+a[i], num:a[i]});
+		js.showmenu({
+			data:da,width:150,align:'left',
+			onclick:function(d){
+				im.addinput(d.num);
+			}
+		});
+	},
+	sendfile:function(){
+		if(typeof(uploadobj)=='undefined')uploadobj = $.rockupfile({
+			onchange:function(d){
+				im.sendfileshow(d);
+			},
+			onprogress:function(f,per,evt){
+				strformat.upprogresss(per);
+			},
+			onsuccess:function(f){
+				im.sendfileok(f,false);
+			},
+			onerror:function(str){
+				js.msg('msg', str);
+				im.senderror(im.upfilearr.nuid);
+			}
+		});
+		strformat.upobj = uploadobj;
+		uploadobj.changefile();
+	},
+	sendfileshow:function(f){
+		f.face 	= sendinfo.face;
+		var fa 	= strformat.showupfile(f);
+		var cont= fa.cont;
+		this.upfilearr = fa;
+		this.addcont(cont);
+	},
+	sendfileok:function(f,sbu){
+		if(!sbu){
+			js.ajax('/apijct/we/file_save/'+cnum+'',f, function(bret){
+				var bda = bret.data;
+				bda.imgpath = baseurl+'/'+bda.thumbpath;
+				im.sendfileok(bda,true);
+			},'post',function(msg){
+				js.msg('msg', str);
+				im.senderror(im.upfilearr.nuid);
+			});
+			return;
+		}
+		var tm= this.upfilearr,conss='';
+		strformat.upsuccess(f);
+		if(js.isimg(f.fileext)){
+			conss = '[图片 '+f.filesizecn+']';
+		}else{
+			conss = '['+f.filename+' '+f.filesizecn+']'
+		}
+		this.sendconts(jm.base64encode(conss), tm.nuid, tm.optdt, f.id);
+	},
+	chatinfo:function(){
+		var url = 'chatfo.html?id='+this.gid+'&type='+this.type+'&name='+jm.base64encode(chatname)+'';
+		js.location(url);
+	},
+	rightqipao:function(o1,e,rnd){
+		
+	}
+}
+
+</script>
+</head>
+
+
+<body>
+
+<div id="headertop">
+	<div class="r-header">
+		<div onclick="js.reload()" id="header_title" class="r-header-text"></div>
+		<span onclick="js.back()" class="r-position-left r-header-btn"><i class="icon-chevron-left"></i></span>
+		<span onclick="im.chatinfo()" style="display:none" id="header_rightbtn" class="r-position-right r-header-btn"><i class="icon-user"></i></span>
+	</div>
+	<div class="blank50"></div>
+	</div>
+<div>
+	
+
+<div class="r-touch" style="height:300px;" id="showview"></div>
+<div class="blank50"></div>
+<div class="r-chat r-border-t">
+	<form onsubmit="return im.submitinput()">
+	<table cellspacing="0" cellpadding="0" width="100%"><tr>
+	<td style="padding-left:10px"><i style="color:#888888;font-size:20px" class="icon-folder-close" onclick="im.sendfile()"></td>
+	<td width="100%" style="padding:10px"><input maxlength="200" type="text" id="contentss" class="r-chat-input"></td>
+	<td style="padding-right:10px"><i style="color:#888888;font-size:24px" class="icon-heart" onclick="im.showemit();return false;"></td>
+	<td style="padding-right:10px"><input style="border-radius:5px" type="button" onclick="im.sendcont()" id="btn" class="r-chat-btn r-btn-active" value="发送"></td>
+	</tr></table>
+	</form>
+</div>
+<link rel="stylesheet" type="text/css" href="../res/fontawesome/css/font-awesome.min.css">
+<script type="text/javascript" src="../res/js/jquery-imgview.js"></script>	
+<script type="text/javascript" src="../res/plugin/jquery-rockdoupull.js"></script>
+	
+</body>
+</html>

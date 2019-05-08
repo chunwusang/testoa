@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=0">
+<title>我的单位</title>
+<link rel="stylesheet" type="text/css" href="../css/weui.min.css"/>
+<link rel="stylesheet" type="text/css" href="../css/rui.css"/>
+<link rel="stylesheet" type="text/css" href="../res/fontawesome/css/font-awesome.min.css">
+<script type="text/javascript" src="../js/jquery.js"></script>
+<script type="text/javascript" src="../js/jsm.js"></script>
+<script type="text/javascript" src="../js/base64-min.js"></script>
+<style>
+body,html{overflow:auto;}
+</style>
+<script>
+function initbody(){
+	gfrom= js.request('gfrom');
+	if(js.iswxbro || js.isdingbro || gfrom=='reim')$('#headertop').remove();
+	if(gfrom=='reim')$('#buttonstr').remove();
+	cnum = js.getoption('nowcnum');
+	im.initload();
+}
+var im = {
+	initload:function(){
+		js.loading();
+		$('#jhdiv').hide();
+		js.ajax('api/we/company/'+cnum+'',false, function(ret){
+			im.showload(ret.data.joincompany);
+		},'get',function(){
+		});
+	},
+	showload:function(da){
+		joincompany= da;
+		var i,len=da.length,s='',zt='',s2;
+		$('#agenhlistno').hide();
+		for(i=0;i<len;i++){
+			zt = '';
+			s2 = '';
+			if(da[i].num==cnum)s2 = '<i class="weui_icon_success_no_circle"></i>';
+			
+			if(da[i].mystatus==0)zt='<font style="font-size:12px" color=red>(待加入)</font>';
+			if(da[i].mystatus==2)zt='<font style="font-size:12px" color=#aaaaaa>(已停用)</font>';
+			s+='<div class="weui_cell">';
+			s+='	<div class="weui_cell_bd weui_cell_primary"><p><img src="'+da[i].logo+'" height="20" width="20" align="absmiddle"> '+da[i].name+' '+zt+''+s2+' </p></div>';
+			s+='<span class="weui_cell_right">';
+			if(da[i].mystatus==1){
+				
+				if(!da[i].ismoren){
+					s+='&nbsp;<input class="weui_btn weui_btn_mini weui_btn_plain_default" type="button" onclick="im.setopt('+i+',0)" value="默认">';
+				}else{
+					s+='&nbsp;<font style="font-size:12px" color="green">主</font>';
+				}
+				if(da[i].num!=cnum)s+='&nbsp;<input class="weui_btn weui_btn_mini weui_btn_primary" type="button" onclick="im.setopt('+i+',1)" value="切换">';
+			}
+			if(da[i].mystatus==0)s+='&nbsp;<input class="weui_btn weui_btn_mini weui_btn_warn" type="button" onclick="im.setopt('+i+',2)" value="去激活">';
+			s+='</span>';
+			s+='</div>';
+		}
+		if(s=='')$('#agenhlistno').show();;
+		$('#list').html(s);
+	},
+	setopt:function(i,lx){
+		var arr = joincompany[i];
+		if(lx==0){
+			js.confirm('确定要将['+arr.name+']设置为默认单位吗？',function(jg){
+				if(jg=='yes'){
+					js.loading('设置中...');
+					js.ajax('api/we/company_setdevcid',{'devcid':arr.id}, function(ret){
+						js.msgok('设置成功');
+						im.initload();
+					},'post',function(msg){
+						
+					});
+				}
+			});
+		}
+		if(lx==1){
+			js.confirm('确定要切换到['+arr.name+']单位吗？',function(jg){
+				if(jg=='yes'){
+					if(gfrom=='reim'){
+						parent.reim.qiehuanunit(arr.num);
+						return;
+					}
+					js.setoption('nowcnum', arr.num);
+					js.getoption('companyshore',arr.shortname);
+					js.loading('切换中...');
+					js.location('/we/index.html?cnum='+arr.num+'');
+				}
+			});
+		}
+		if(lx==2){
+			$('#jhdiv').show();
+			this.arr = arr;
+			$('#jhcompany').html('激活加入单位:'+arr.name+'');
+			$('#jhmobile').html(''+arr.mobile+'');
+		}
+	},
+	onjihuostr:function(){
+		var code = $('#code').val();
+		if(code.length!=6){
+			js.alert('验证码格式有误');
+			return;
+		}
+		js.loading('激活加入中...');
+		var arr = this.arr;
+		js.ajax('api/we/company_joinactive',{
+			'aid':arr.aid,
+			'device':device,
+			'mobileyzm':code,
+		}, function(ret){
+			js.msgok('激活加入成功',function(){
+				im.initload();
+			},1);
+		},'post',function(msg){
+			js.msgerror(msg);
+		});
+	}
+}
+
+function getcode(o1){
+	var sj = jm.base64decode(im.arr.mobilesho);
+	o1.disabled = true;
+	js.ajax('/api/we/base_getcode',{
+		'mobile':sj,
+		'mobilecode':'',
+		'device':device,
+		'aid':im.arr.aid,
+		'gtype':'join'
+	},function(ret){
+		js.msg('success', '验证码已发送到手机上');
+		dshitime(60, o1);
+	},'get',function(){
+		o1.disabled = false;
+	});
+}
+function dshitime(sj,o1){
+	if(sj==0){
+		o1.disabled=false;
+		o1.value='重新获取';
+		return;
+	}
+	o1.disabled=true;
+	o1.value=''+sj+'';
+	setTimeout(function(){dshitime(sj-1, o1)},1000);
+}
+
+</script>
+</head>
+
+
+<body>
+
+<div id="headertop">
+	<div class="r-header">
+		<div onclick="location.reload()" id="header_title" class="r-header-text">我的单位</div>
+		<span onclick="js.back()" class="r-position-left r-header-btn"><i class="icon-chevron-left"></i></span>
+	</div>
+	<div class="blank50"></div>
+	</div>
+<div>
+
+<div onclick="js.reload();" class="weui_cells_title">我加入单位</div>
+<div id="agenhlistno" style="padding-top:40%;text-align:center;color:#cccccc;display:none">没有找到与我相关的单位</div>
+<div id="list" class="weui_cells weui_cells_access">
+	
+</div>	
+<div id="jhdiv" style="display:none">
+<div class="weui_cells_title" id="jhcompany">激活单位</div>	
+<div class="weui_cells weui_cells_form">
+	<div class="weui_cell">
+		<div class="weui_cell_hd"><label class="weui_label">手机号</label></div>
+		<div class="weui_cell_bd weui_cell_primary" id="jhmobile">
+			158000000
+		</div>
+	</div>
+	
+	<div class="weui_cell">
+		<div class="weui_cell_hd"><label class="weui_label">验证码</label></div>
+		<div class="weui_cell_bd weui_cell_primary">
+			<input class="weui_input" type="text" id="code" maxlength="6" placeholder="验证码"/>
+		</div>
+		<div class="weui_cell_ft">
+			<input class="weui_btn weui_btn_mini weui_btn_primary" type="button" onclick="getcode(this)" value="获取">
+		</div>
+	</div>
+</div>
+	
+<div class="weui_btn_area">
+	<input class="weui_btn weui_btn_primary" type="button" onclick="im.onjihuostr(0)" value="提交激活" id="btn0">
+</div>	
+</div>	
+
+	
+
+<div style="bottom:30px" id="buttonstr" class="weui_extra_area"><a onclick="js.back()" href="javascript:;">&lt;&lt;返回</a></div>
+	<div style="height:10px"></div>
+</body>
+</html>

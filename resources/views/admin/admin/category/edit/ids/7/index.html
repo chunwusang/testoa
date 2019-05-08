@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+    <head>
+        <meta charset="utf-8">
+<title></title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="renderer" content="webkit">
+
+<link rel="shortcut icon" href="/assets/img/favicon.ico" />
+<!-- Loading Bootstrap -->
+<link href="/assets/css/backend.min.css?v=1.0.1" rel="stylesheet">
+
+<!-- HTML5 shim, for IE6-8 support of HTML5 elements. All other JS at the end of file. -->
+<!--[if lt IE 9]>
+  <script src="/assets/js/html5shiv.js"></script>
+  <script src="/assets/js/respond.min.js"></script>
+<![endif]-->
+<script type="text/javascript">
+    var require = {
+        config:  {"site":{"name":"FastAdmin","cdnurl":"","version":"1.0.1","timezone":"Asia\/Shanghai","languages":{"backend":"zh-cn","frontend":"zh-cn"}},"upload":{"cdnurl":"","uploadurl":"ajax\/upload","bucket":"local","maxsize":"10mb","mimetype":"jpg,png,jpeg,gif","multipart":[],"multiple":false},"modulename":"admin","controllername":"category","actionname":"edit","jsname":"backend\/category","moduleurl":"\/admin","language":"zh-cn","fastadmin":{"usercenter":true,"login_captcha":false,"login_failure_retry":true,"login_unique":false,"login_background":"\/assets\/img\/loginbg.jpg","multiplenav":false,"checkupdate":false,"version":"1.0.0.20181210_beta","api_url":"https:\/\/api.fastadmin.net"},"referer":null,"__PUBLIC__":"\/","__ROOT__":"\/","__CDN__":"https:\/\/cdn.pure.fastadmin.net"}    };
+</script>
+    </head>
+
+    <body class="inside-header inside-aside is-dialog">
+        <div id="main" role="main">
+            <div class="tab-content tab-addtabs">
+                <div id="content">
+                    <div class="row">
+                        <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+                            <section class="content-header hide">
+                                <h1>
+                                    控制台                                    <small>Control panel</small>
+                                </h1>
+                            </section>
+                                                        <div class="content">
+                                <form id="edit-form" class="form-horizontal" role="form" data-toggle="validator" method="POST" action="">
+
+    <div class="form-group">
+        <label for="c-type" class="control-label col-xs-12 col-sm-2">栏目类型:</label>
+        <div class="col-xs-12 col-sm-8">
+
+            <select id="c-type" data-rule="required" class="form-control selectpicker" name="row[type]">
+                                <option value="default" >默认</option>
+                                <option value="page" selected>单页</option>
+                                <option value="article" >文章</option>
+                                <option value="test" >Test</option>
+                            </select>
+
+        </div>
+    </div>
+    <div class="form-group">
+        <label for="c-pid" class="control-label col-xs-12 col-sm-2">父ID:</label>
+        <div class="col-xs-12 col-sm-8">
+
+            <select id="c-pid" data-rule="required" class="form-control selectpicker" name="row[pid]">
+                                <option data-type="all" class="" value="0" >无</option>
+                                <option data-type="test" class="hide" value="13" > 测试2</option>
+                                <option data-type="test" class="hide" value="12" > 测试1</option>
+                                <option data-type="page" class="" value="5" selected> 软件产品</option>
+                                <option data-type="page" class="" value="7" >&nbsp;├ 企业管理软件</option>
+                                <option data-type="page" class="" value="11" >&nbsp;│&nbsp;├ SASS平台软件</option>
+                                <option data-type="page" class="" value="10" >&nbsp;│&nbsp;└ CRM系统 </option>
+                                <option data-type="page" class="" value="6" >&nbsp;└ 网站建站</option>
+                                <option data-type="page" class="" value="9" >&nbsp;&nbsp;&nbsp;├ 移动端</option>
+                                <option data-type="page" class="" value="8" >&nbsp;&nbsp;&nbsp;└ PC端</option>
+                                <option data-type="page" class="" value="2" > 移动应用</option>
+                                <option data-type="page" class="" value="4" >&nbsp;├ Android开发</option>
+                                <option data-type="page" class="" value="3" >&nbsp;└ 微信公众号</option>
+                                <option data-type="page" class="" value="1" > 官方新闻</option>
+                            </select>
+
+        </div>
+    </div>
+    <div class="form-group">
+        <label for="c-name" class="control-label col-xs-12 col-sm-2">名称:</label>
+        <div class="col-xs-12 col-sm-8">
+            <input id="c-name" data-rule="required" class="form-control" name="row[name]" type="text" value="企业管理软件">
+        </div>
+    </div>
+    <div class="form-group">
+        <label for="c-nickname" class="control-label col-xs-12 col-sm-2">昵称:</label>
+        <div class="col-xs-12 col-sm-8">
+            <input id="c-nickname" data-rule="required" class="form-control" name="row[nickname]" type="text" value="company">
+        </div>
+    </div>
+    <div class="form-group">
+        <label for="c-flag" class="control-label col-xs-12 col-sm-2">标志:</label>
+        <div class="col-xs-12 col-sm-8">
+
+            <select  id="c-flag" class="form-control selectpicker" multiple="" name="row[flag][]">
+                                <option value="hot" >热门</option>
+                                <option value="index" selected>首页</option>
+                                <option value="recommend" >推荐</option>
+                            </select>
+
+        </div>
+    </div>
+    <div class="form-group">
+        <label for="c-image" class="control-label col-xs-12 col-sm-2">图片:</label>
+        <div class="col-xs-12 col-sm-8">
+            <div class="input-group">
+                <input id="c-image" class="form-control" size="50" name="row[image]" type="text" value="/assets/img/qrcode.png">
+                <div class="input-group-addon no-border no-padding">
+                    <span><button type="button" id="plupload-image" class="btn btn-danger plupload" data-input-id="c-image" data-mimetype="image/gif,image/jpeg,image/png,image/jpg,image/bmp" data-multiple="false" data-preview-id="p-image"><i class="fa fa-upload"></i> 上传</button></span>
+                    <span><button type="button" id="fachoose-image" class="btn btn-primary fachoose" data-input-id="c-image" data-mimetype="image/*" data-multiple="false"><i class="fa fa-list"></i> 选择</button></span>
+                </div>
+                <span class="msg-box n-right"></span>
+            </div>
+            <ul class="row list-inline plupload-preview" id="p-image"></ul>
+        </div>
+    </div>
+    <div class="form-group">
+        <label for="c-keywords" class="control-label col-xs-12 col-sm-2">关键字:</label>
+        <div class="col-xs-12 col-sm-8">
+            <input id="c-keywords" class="form-control" name="row[keywords]" type="text" value="">
+        </div>
+    </div>
+    <div class="form-group">
+        <label for="c-description" class="control-label col-xs-12 col-sm-2">描述:</label>
+        <div class="col-xs-12 col-sm-8">
+            <textarea id="c-description" class="form-control" name="row[description]"></textarea>
+        </div>
+    </div>
+    <div class="form-group">
+        <label for="c-weigh" class="control-label col-xs-12 col-sm-2">权重:</label>
+        <div class="col-xs-12 col-sm-8">
+            <input id="c-weigh" class="form-control" name="row[weigh]" type="number" value="7">
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="control-label col-xs-12 col-sm-2">状态:</label>
+        <div class="col-xs-12 col-sm-8">
+            <div class="radio"><label for="row[status]-normal"><input id="row[status]-normal" checked="checked" name="row[status]" type="radio" value="normal"> 正常</label> <label for="row[status]-hidden"><input id="row[status]-hidden" name="row[status]" type="radio" value="hidden"> 隐藏</label></div>        </div>
+    </div>
+    <div class="form-group layer-footer">
+        <label class="control-label col-xs-12 col-sm-2"></label>
+        <div class="col-xs-12 col-sm-8">
+            <button type="submit" class="btn btn-success btn-embossed disabled">确定</button>
+            <button type="reset" class="btn btn-default btn-embossed">重置</button>
+        </div>
+    </div>
+</form>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script src="/assets/js/require.min.js" data-main="/assets/js/require-backend.min.js?v=1.0.1"></script>
+<script>
+var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "https://hm.baidu.com/hm.js?58347d769d009bcf6074e9a0ab7ba05e";
+  var s = document.getElementsByTagName("script")[0];
+  s.parentNode.insertBefore(hm, s);
+})();
+</script>
+    </body>
+</html>
